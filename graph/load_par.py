@@ -1,5 +1,4 @@
-
-from torchdrug import  layers, datasets,transforms,core
+from torchdrug import  layers, datasets,transforms,core, models
 from torchdrug.core import Registry as R
 from torchdrug.layers import geometry
 
@@ -15,7 +14,8 @@ import torch.optim as optim
 from einops import rearrange, repeat, pack, unpack
 import matplotlib.pyplot as plt
 
-from model import DGMGearnet_only_sequence
+from DGMGearnet.model import DGMGearnet_only_sequence, DGMGearnet_edge
+from graph_rewiring import GraphRewiring
 
 import time
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -24,6 +24,25 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import numpy
 
+
+def adjacency_matrix_to_edge_list(A):
+    # 找到非零元素的索引
+    idx = torch.nonzero(A, as_tuple=False) 
+    i = idx[:, 0]  
+    j = idx[:, 1]
+    line_num = A.size(0)  
+    
+    # 计算关系编号（relation）和调整后的列索引（j_prime）
+    relation = torch.div(j, line_num, rounding_mode='floor')  # 关系编号，0到6
+    j_prime = j % line_num  # 调整后的列索引，0到184
+    
+    # 组合得到edge_list矩阵，形状为[n, 3]
+    edge_list = torch.stack([i, j_prime, relation], dim=1)
+    
+    # 根据edge_list的索引顺序，获取对应的edge_weighted矩阵
+    edge_weighted = A[i, j]
+    
+    return edge_list, edge_weighted
 
 
 EnzymeCommission = R.search("datasets.EnzymeCommission")
@@ -47,18 +66,30 @@ graphs = data.Protein.pack(graphs)
 graph = graph_construction_model(graphs)
 
 
-relation_dims = [[21, 512, 512], [4096, 512, 512]]
+relation_dims = [[21, 128, 512, 512], [4096, 1024, 512, 512]]
 score_in_dim = 512
 score_out_dim = 512
-diffusion_dims = [[21, 512, 512], [512, 512, 512]] 
+diffusion_dims = [[21, 512, 512, 512], [512, 512, 512, 512]]  
 num_relations = graph.num_relation
-attn_num_relation = 5
-num_heads = 4
+attn_num_relation = 2
+num_heads = 8
 window_size = 10
-k = 3
+k = 5
+edge_input_dim = 59
+num_angle_bin = 8
 
-model = DGMGearnet_only_sequence(relation_dims, score_in_dim, score_out_dim, diffusion_dims, num_relations, attn_num_relation, num_heads, window_size, k, 
-                                 short_cut = True, batch_norm=True, concat_hidden=True, readout="sum")
+model = DGMGearnet_edge(relation_dims, score_in_dim, score_out_dim, diffusion_dims, num_relations, attn_num_relation, num_heads, window_size, k, 
+                        edge_input_dim, num_angle_bin, batch_norm=True, sample = False,activation="relu", concat_hidden=True, edge_feature="gearnet", readout="sum")
+
+output = model(graph.to(device), graph.node_feature.float().to(device))
+graph_feature = output["graph_feature"]
+
+
+
+
+
+"""
+# 加载模型参数并画图
 model_path = 'DGMGearnet/model_epoch_92.pth'
 checkpoint = torch.load(model_path)
 
@@ -104,3 +135,4 @@ for i, subgraph in enumerate(subgraphs):
 
 
 print(output)
+"""
