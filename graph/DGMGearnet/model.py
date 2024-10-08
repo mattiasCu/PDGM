@@ -247,6 +247,7 @@ class DGMGearnet_edge(nn.Module, core.Configurable):
                 attn_output = torch.cat([attn_output, adjacency[:, :self.space_information_num *adjacency.size(1)//self.num_relation]], dim=1)
             
             new_graph = self.graph_construction(graph, attn_output)
+            print(new_graph.edge_list)
             output = self.layers[i](new_graph.to(device), layer_input.to(device))
             hidden = output["node_feature"]
             
