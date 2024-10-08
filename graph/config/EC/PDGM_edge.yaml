@@ -23,7 +23,7 @@ task:
     num_heads: 4
     window_size: 10
     k: 3
-    edge_in_dim: 59
+    edge_input_dim: 59
     num_angle_bin: 8
     short_cut: True
     batch_norm: True

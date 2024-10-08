@@ -181,6 +181,8 @@ class DGMGearnet_edge(nn.Module, core.Configurable):
         self.batch_norm = batch_norm
         self.sample = sample
         
+        self.output_dim = diffusion_dims[-1][-1]*len(diffusion_dims) if concat_hidden else diffusion_dims[-1][-1]
+        
         self.layers = nn.ModuleList()
         self.score_layers = nn.ModuleList()
         self.graph_construction = GraphRewiring(self.edge_feature)
