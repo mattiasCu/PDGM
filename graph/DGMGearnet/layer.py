@@ -482,6 +482,8 @@ class GraphRewiring(nn.Module, core.Configurable):
         
         # 计算关系编号（relation）和调整后的列索引（j_prime）
         relation = torch.div(j, line_num, rounding_mode='floor')  # 关系编号，0到6
+        if torch.any(relation > 6):
+                    raise ValueError("张量中存在大于7的元素！")
         j_prime = j % line_num  # 调整后的列索引，0到184
         
         # 组合得到edge_list矩阵，形状为[n, 3]
@@ -520,6 +522,7 @@ class GraphRewiring(nn.Module, core.Configurable):
         edge2graph = graph.node2graph[node_in]
         order = edge2graph.argsort()
         edge_list = edge_list[order]
+        edge_weighted = edge_weighted[order]
         num_edges = edge2graph.bincount(minlength=graph.batch_size)
         offsets = (graph.num_cum_nodes - graph.num_nodes).repeat_interleave(num_edges)
         num_relation = graph.num_relation
